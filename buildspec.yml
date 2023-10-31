@@ -1,0 +1,43 @@
+version: 0.2
+
+env:
+  variables:
+    VERSION_NUMBER: "v1.0.0" # Default value
+
+phases:
+  pre_build:
+    commands:
+      - apt-get update
+      - apt-get install -y zip
+  build:
+    commands:
+      # Clone the GitHub repository
+      - git clone https://github.com/FlorinManaila/Redis-FlexibleSubscription.git
+      - cd Redis-FlexibleSubscription
+      # Extract the version number from the commit message
+      - |
+        commit_msg=$(git log -1 --pretty=format:%s)
+        version_number=$(echo "$commit_msg" | grep -oP 'v\d+\.\d+\.\d+')
+        export VERSION_NUMBER=$version_number
+      # Upload CF template to S3
+      - aws s3 cp CloudFormation/FlexibleSubscriptionCFTemplate.yml s3://redis-cicd/Flexible-Subscription/$VERSION_NUMBER/
+      - aws s3 cp CloudFormation/FlexibleSubscriptionCFTemplate.yml s3://redis-cicd/Flexible-Subscription/latest/
+      # Create a zip archive for lambdas and upload archives to S3
+      - zip -j FlexibleSubscription-CheckState.zip Lambda/FlexibleSubscription-CheckState.py
+      - zip -j FlexibleSubscription-CFResponse.zip Lambda/FlexibleSubscription-CFResponse.py
+      - zip -j FlexibleSubscription-Handler.zip Lambda/FlexibleSubscription-Handler.py
+      - aws s3 cp FlexibleSubscription-CheckState.zip s3://redis-cicd/Flexible-Subscription/latest/
+      - aws s3 cp FlexibleSubscription-CFResponse.zip s3://redis-cicd/Flexible-Subscription/latest/
+      - aws s3 cp FlexibleSubscription-Handler.zip s3://redis-cicd/Flexible-Subscription/latest/
+      - aws s3 cp FlexibleSubscription-CheckState.zip s3://redis-cicd/Flexible-Subscription/$VERSION_NUMBER/
+      - aws s3 cp FlexibleSubscription-CFResponse.zip s3://redis-cicd/Flexible-Subscription/$VERSION_NUMBER/
+      - aws s3 cp FlexibleSubscription-Handler.zip s3://redis-cicd/Flexible-Subscription/$VERSION_NUMBER/
+      # Create a zip archive for layers and upload archives to S3
+      - cd Layers/requests_layer && zip -r requests_layer.zip python
+      - aws s3 cp requests_layer.zip s3://redis-cicd/Flexible-Subscription/$VERSION_NUMBER/
+      - aws s3 cp requests_layer.zip s3://redis-cicd/Flexible-Subscription/latest/
+      - cd ../secrets_layer && zip -r secrets_layer.zip python
+      - aws s3 cp secrets_layer.zip s3://redis-cicd/Flexible-Subscription/$VERSION_NUMBER/
+      - aws s3 cp secrets_layer.zip s3://redis-cicd/Flexible-Subscription/latest/
+
+      
