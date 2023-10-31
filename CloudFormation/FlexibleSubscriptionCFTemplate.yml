@@ -1,0 +1,613 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloud formation template for Flexible Subscription
+#Mappings section is designed for AWS managed layer: AWS-Parameters-and-Secrets-Lambda-Extension-Arm64. Because the layer ARN depends on the region
+#of creation, mappings will make a one-to-one relation between ARN and region.
+Mappings:
+  ParametersAndSecretsLayer:
+    us-east-1:
+        ParametersAndSecrets: arn:aws:lambda:us-east-1:177933569100:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    us-east-2:
+        ParametersAndSecrets: arn:aws:lambda:us-east-2:590474943231:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    us-west-1: 
+        ParametersAndSecrets: arn:aws:lambda:us-west-1:997803712105:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    us-west-2:
+        ParametersAndSecrets: arn:aws:lambda:us-west-2:345057560386:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    af-south-1:
+        ParametersAndSecrets: arn:aws:lambda:af-south-1:317013901791:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-east-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-east-1:768336418462:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-southeast-3:
+        ParametersAndSecrets: arn:aws:lambda:ap-southeast-3:490737872127:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-south-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-south-1:176022468876:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ap-northeast-3:
+        ParametersAndSecrets: arn:aws:lambda:ap-northeast-3:576959938190:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-northeast-2:
+        ParametersAndSecrets: arn:aws:lambda:ap-northeast-2:738900069198:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    ap-southeast-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-southeast-1:044395824272:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ap-southeast-2:
+        ParametersAndSecrets: arn:aws:lambda:ap-southeast-2:665172237481:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ap-northeast-1:
+        ParametersAndSecrets: arn:aws:lambda:ap-northeast-1:133490724326:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    ca-central-1:
+        ParametersAndSecrets: arn:aws:lambda:ca-central-1:200266452380:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    eu-central-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    eu-west-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-west-1:015030872274:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    eu-west-2:
+        ParametersAndSecrets: arn:aws:lambda:eu-west-2:133256977650:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:11
+    eu-south-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-south-1:325218067255:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    eu-west-3:
+        ParametersAndSecrets: arn:aws:lambda:eu-west-3:780235371811:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    eu-north-1:
+        ParametersAndSecrets: arn:aws:lambda:eu-north-1:427196147048:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    me-south-1:
+        ParametersAndSecrets: arn:aws:lambda:me-south-1:832021897121:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+    sa-east-1:
+        ParametersAndSecrets: arn:aws:lambda:sa-east-1:933737806257:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:8
+
+#All the parameters that can be used accord to Swagger with 2 additional ones: version and baseURL, used to determine the CloudFormation template
+#version that is desired to be used and the base URL for the RedisCloud server.     
+Parameters:
+    version:
+      Type: String
+      Description: "[Required]. The version of Cloud Formation template that is desired to be used. The version must be available in the S3 bucket. Default value: latest. Example: v2.3.4"
+      Default: "latest"
+    baseURL:
+      Type: String
+      Description: "[Required]. Base URL link used to connect to API. Example: https://api-k8s-cloudapi.qa.redislabs.com."
+      Default: https://api-k8s-cloudapi.qa.redislabs.com
+    subName:
+      Type: String
+      Description: "[Optional]. Subscription name. Example: My new subscription"
+    dryRun:
+      Type: String
+      AllowedValues: 
+        - true
+        - false
+      Description: "[Optional]. When 'false': Creates a deployment plan and deploys it (creating any resources required by the plan). When 'true': creates a read-only deployment plan without any resource creation. Example: false. Default: 'true'."
+      Default: true
+    deploymentType:
+      Type: String
+      AllowedValues: 
+        - single-region
+      Description: "[Optional]. Creates a single region subscription. Example: single-region"
+      Default: single-region
+    paymentMethod:
+      Type: String
+      AllowedValues: 
+        - credit-card
+        - marketplace
+      Description: "[Optional]. Payment method for the requested subscription. If credit card is specified, the payment method Id must be defined. Default: 'credit-card'"
+      Default: credit-card
+    paymentMethodId:
+      Type: Number
+      Description: "[Required]. A valid payment method (credit card, wire transfer etc) pre-defined in the current account. It will be billed for any charges related to the created subscription). Not allowed for GCP account"
+    memoryStorage:
+      Type: String
+      AllowedValues: 
+        - ram
+        - ram-and-flash
+      Description: "[Optional]. Optional. Memory storage preference: either 'ram' or a combination of 'ram-and-flash'. Example: ram. Default: 'ram'"
+      Default: ram
+    provider:
+     Type: String
+     AllowedValues:
+       - AWS
+     Description: "[Optional]. Cloud provider. Example: AWS. Default: 'AWS'"
+     Default: AWS
+    cloudAccountId:
+     Type: Number
+     Description: "[Optional]. Cloud account identifier. Default: Redis internal cloud account (using Cloud Account Id = 1 implies using Redis internal cloud account). Note that a GCP subscription can be created only with Redis internal cloud account.Example: 1. Default: 1"
+     Default: 1
+    region:
+     Type: String
+     Description: "[Required]. Deployment region as defined by cloud provider. Example: us-east-1"
+    multipleAvailabilityZones:
+     Type: String
+     AllowedValues: 
+       - true
+       - false
+     Description: "[Optional]. Support deployment on multiple availability zones within the selected region. Example: false. Default: 'false'" 
+     Default: false
+    preferredAvailabilityZones:
+     Type: String
+     Description: "[Optional]. Availability zones deployment preferences (for the selected provider & region). Example = '['us-east-1a', 'us-east-1c', 'us-east-2e']'"
+    deploymentCIDR:
+     Type: String
+     Description: "[Required]. Deployment CIDR mask. Example: 10.0.0.0/24. Default: If using Redis internal cloud account, 192.168.0.0/24"
+     Default: 192.168.0.0/24
+    vpcId:
+     Type: String
+     Description: "[Optional]. Either an existing VPC Id (already exists in the specific region) or create a new VPC (if no VPC is specified). VPC Identifier must be in a valid format (for example: 'vpc-0125be68a4625884ad') and existing within the hosting account"
+    dbname:
+     Type: String
+     Description: "[Required]. Database name (Database name must be up to 40 characters long, include only letters, digits, or hyphen ('-'), start with a letter, and end with a letter or digit). Example: Redis-database-example"
+    protocol:
+     Type: String
+     AllowedValues: 
+       - redis
+       - memcached
+     Description: "[Optional]. Database protocol: either 'redis' or 'memcached'. Default: 'redis'"
+     Default: redis
+    memoryLimitInGb:
+      Type: Number
+      Description: "[Required]. Maximum memory usage for this specific database. Minimum: 0.1. exclusiveMinimum: false. Example: 1"
+    supportOSSClusterApi:
+      Type: String
+      AllowedValues: 
+       - true
+       - false
+      Description: "[Optional]. Support Redis open-source (OSS) Cluster API. Default: 'false'"
+      Default: false
+    dataPersistence:
+      Type: String
+      AllowedValues: 
+        - none
+        - aof-every-1-second
+        - aof-every-write
+        - snapshot-every-1-hour
+        - snapshot-every-6-hours
+        - snapshot-every-12-hours
+      Description: "[Optional]. Rate of database data persistence (in persistent storage). Example: none. Default: 'none'"
+      Default: none
+    replication:
+      Type: String
+      AllowedValues: 
+        - true
+        - false
+      Description: "[Optional]. Databases replication. Default: 'true'"
+      Default: true
+    by:
+      Type: String
+      AllowedValues: 
+        - number-of-shards
+        - operations-per-second
+      Description: "[Required]. Throughput measurement method. Either 'number-of-shards' or 'operations-per-second'"
+    value:
+      Type: Number
+      Description: "[Required]. Throughput value (as applies to selected measurement method). Example: 10000"
+    moduleName:
+      Type: String
+      Description: "[Required only to enable modules]. Redis module Id"
+    parameters:
+      Type: String
+      Description: "[Optional]. Redis database module parameters (name and value), as relevant to the specific module (see modules parameters specification). Example: OrderedMap {}"
+    quantity:
+      Type: Number
+      Description: "[Optional]. Number of databases (of this type) that will be created. Default: 1"
+      Default: 1
+    averageItemSizeInBytes:
+      Type: String
+      Description: "[Optional]. Relevant only to ram-and-flash clusters. Estimated average size (measured in bytes) of the items stored in the database. Default: 1000"
+    respVersion:
+      Type: String
+      Description: "[Optional]. RESP version must be compatible with Redis version. Example: resp3. Allowed values: resp2/resp3."
+    redisVersion:
+      Type: String
+      AllowedValues: 
+        - default
+        - latest
+      Description: "[Optional]. If specified, the redisVersion defines the cluster version, Default = 'default'"
+      Default: default
+
+#Metadata block is used to separate parameters displayed upon stack creation in a more organised order.
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - 
+        Parameters:
+          - version
+          - baseURL
+          - subName
+          - dryRun
+          - deploymentType
+          - paymentMethod
+          - paymentMethodId
+          - memoryStorage
+          - redisVersion
+      - 
+       Label: 
+         default: "cloudProviders"
+       Parameters:
+         - provider
+         - cloudAccountId
+      - 
+       Label: 
+         default: "regions"
+       Parameters:
+         - region
+         - multipleAvailabilityZones
+         - preferredAvailabilityZones
+      - 
+       Label: 
+         default: "networking"
+       Parameters:
+         - deploymentCIDR
+         - vpcId
+      - 
+       Label: 
+         default: "databases"
+       Parameters:
+         - dbname
+         - protocol
+         - memoryLimitInGb
+         - supportOSSClusterApi
+         - dataPersistence
+         - replication
+         - by
+         - value
+         - moduleName
+         - parameters
+         - quantity
+         - averageItemSizeInBytes 
+         - respVersion    
+
+#Conditions are used to check if an optional parameter have a value or the field is empty
+Conditions:
+  subNameCondition:                    !Not [!Equals [!Ref subName, ""]]
+  dryRunCondition:                     !Not [!Equals [!Ref dryRun, ""]]
+  deploymentTypeCondition:             !Not [!Equals [!Ref deploymentType, ""]]
+  paymentMethodCondition:              !Not [!Equals [!Ref paymentMethod, ""]]
+  memoryStorageCondition:              !Not [!Equals [!Ref memoryStorage, ""]]
+  providerCondition:                   !Not [!Equals [!Ref provider, ""]]
+  cloudAccountIdCondition:             !Not [!Equals [!Ref cloudAccountId, ""]]
+  multipleAvailabilityZonesCondition:  !Not [!Equals [!Ref multipleAvailabilityZones, ""]]
+  preferredAvailabilityZonesCondition: !Not [!Equals [!Ref preferredAvailabilityZones, ""]]
+  vpcIdCondition:                      !Not [!Equals [!Ref vpcId, ""]]
+  protocolCondition:                   !Not [!Equals [!Ref protocol, ""]]
+  supportOSSClusterApiCondition:       !Not [!Equals [!Ref supportOSSClusterApi, ""]]
+  dataPersistenceCondition:            !Not [!Equals [!Ref dataPersistence, ""]]
+  replicationCondition:                !Not [!Equals [!Ref replication, ""]]
+  byCondition:                         !Not [!Equals [!Ref by, ""]]
+  valueCondition:                      !Not [!Equals [!Ref value, ""]]
+  moduleNameCondition:                 !Not [!Equals [!Ref moduleName, ""]]
+  parametersCondition:                 !Not [!Equals [!Ref parameters, ""]]
+  quantityCondition:                   !Not [!Equals [!Ref quantity, ""]]
+  averageItemSizeInBytesCondition:     !Not [!Equals [!Ref averageItemSizeInBytes, ""]]
+  respVersionCondition:                !Not [!Equals [!Ref respVersion, ""]]
+  redisVersionCondition:               !Not [!Equals [!Ref redisVersion, ""]]
+
+#Resources block creates and integrates the required AWS services within the architecture
+Resources:
+  #Step Functions IAM role that allows Lambda invokation
+  StepFunctionsAllowLambda:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: 
+        Fn::Sub: StepFunctionsAllowLambda-${AWS::Region}-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - states.amazonaws.com
+            Action :
+            - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: StepFunctionsAllowLambda
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - lambda:InvokeFunction
+            Resource: "*"
+
+  #Configuration of Step Functions' State Machine with all the required steps and lambda invokations
+  MyStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    DependsOn: 
+      - FlexibleSubscriptionCheckState
+      - FlexibleSubscriptionCFResponse
+    Properties:
+      RoleArn: !GetAtt StepFunctionsAllowLambda.Arn
+      StateMachineName:
+        Fn::Sub: "FlexibleSubscription-StateMachine-${AWS::Region}-${AWS::StackName}"
+      DefinitionString: !Sub |-
+        {
+          "Comment": "A description of my state machine",
+          "StartAt": "CheckSubscriptionStatus",
+          "States": {
+            "CheckSubscriptionStatus": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:FlexibleSubscription-CheckState-${AWS::Region}-${AWS::StackName}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Choice"
+            },
+            "Choice": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Not": {
+                    "Variable": "$.sub_status",
+                    "StringEquals": "active"
+                  },
+                  "Next": "Wait"
+                }
+              ],
+              "Default": "GiveCFResponse"
+            },
+            "GiveCFResponse": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:FlexibleSubscription-CFResponse-${AWS::Region}-${AWS::StackName}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            },
+            "Wait": {
+              "Type": "Wait",
+              "Seconds": 300,
+              "Next": "CheckSubscriptionStatus"
+            }
+          }
+        }
+
+  #Creation of lambda's requests_layer using the archive from S3.
+  RequestsLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: RequestsLayer
+      Description: RequestsLayer
+      Content:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Subscription/"
+              - !Ref version
+              - "/requests_layer.zip"
+      CompatibleRuntimes:
+        - python3.7
+        - python3.8
+        - python3.9
+        - python3.10
+        - python3.11
+      CompatibleArchitectures: 
+        - arm64
+        - x86_64
+
+  #Creation of lambda's secrets_layer using the archive from S3.
+  SecretsLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: SecretsLayer
+      Description: SecretsLayer
+      Content:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Subscription/"
+              - !Ref version
+              - "/secrets_layer.zip"
+      CompatibleRuntimes:
+        - python3.7
+        - python3.8
+        - python3.9
+        - python3.10
+        - python3.11
+      CompatibleArchitectures: 
+        - arm64
+        - x86_64
+  
+  #Lambda's Execution Role created in IAM allowing CloudWatch, Step Functions, CloudFormation, Secrets Manager and S3 actions
+  RedisLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: 
+        Fn::Sub: FlexibleSubscriptionLambdaExecutionRole-${AWS::Region}-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: FlexibleSubscriptionLambdaExecutionRole
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:PutRetentionPolicy
+            - logs:CreateLogGroup
+            - states:*
+            - cloudformation:*
+            - secretsmanager:GetSecretValue
+            - s3:PutObject
+            - s3:PutObjectAcl
+            - s3:GetObject
+            - s3:GetObjectAcl
+            - s3:DeleteObject
+            Resource: "*"
+
+  #EventInvokeConfig blocks are used to set the maximum retry attempts of lambda's invokation to 0. This means that each lambda will run only 1 time.
+  FlexibleSubscriptionHandlerEventInvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties: 
+      FunctionName: !Ref FlexibleSubscriptionHandler
+      MaximumRetryAttempts: 0
+      Qualifier: $LATEST
+  FlexibleSubscriptionCheckStateEventInvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties: 
+      FunctionName: !Ref FlexibleSubscriptionCheckState
+      MaximumRetryAttempts: 0
+      Qualifier: $LATEST
+  FlexibleSubscriptionCFResponseEventInvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties: 
+      FunctionName: !Ref FlexibleSubscriptionCFResponse
+      MaximumRetryAttempts: 0
+      Qualifier: $LATEST
+
+  #Main Lambda function's settings and configurations
+  FlexibleSubscriptionHandler:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "FlexibleSubscription-Handler-${AWS::Region}-${AWS::StackName}"
+      Architectures: 
+        - arm64
+      Runtime: python3.10
+      Handler: FlexibleSubscription-Handler.lambda_handler
+      Timeout: 300
+      Role: !GetAtt RedisLambdaExecutionRole.Arn
+      Layers:
+        - !Ref RequestsLayer
+        - !Ref SecretsLayer
+        - !FindInMap [ParametersAndSecretsLayer, !Ref "AWS::Region", ParametersAndSecrets]
+      Code:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Subscription/"
+              - !Ref version
+              - "/FlexibleSubscription-Handler.zip"
+
+  #CheckState Lambda function's config and settings used to check if the resource created is active or not.
+  FlexibleSubscriptionCheckState:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "FlexibleSubscription-CheckState-${AWS::Region}-${AWS::StackName}"
+      Architectures: 
+        - arm64
+      Runtime: python3.10
+      Handler: FlexibleSubscription-CheckState.lambda_handler
+      Timeout: 300
+      Role: !GetAtt RedisLambdaExecutionRole.Arn
+      Layers:
+        - !Ref RequestsLayer
+        - !Ref SecretsLayer
+        - !FindInMap [ParametersAndSecretsLayer, !Ref "AWS::Region", ParametersAndSecrets]
+      Code:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Subscription/"
+              - !Ref version
+              - "/FlexibleSubscription-CheckState.zip"
+
+  #CFResponse Lambda function's config and settings used to send the response back to CloudFormation stack.
+  FlexibleSubscriptionCFResponse:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "FlexibleSubscription-CFResponse-${AWS::Region}-${AWS::StackName}"
+      Architectures: 
+        - arm64
+      Runtime: python3.10
+      Handler: FlexibleSubscription-CFResponse.lambda_handler
+      Timeout: 300
+      Role: !GetAtt RedisLambdaExecutionRole.Arn
+      Layers:
+        - !Ref RequestsLayer
+        - !Ref SecretsLayer
+        - !FindInMap [ParametersAndSecretsLayer, !Ref "AWS::Region", ParametersAndSecrets]
+      Code:
+        S3Bucket: redis-cicd
+        S3Key:
+          Fn::Join:
+            - ""
+            - - "Flexible-Subscription/"
+              - !Ref version
+              - "/FlexibleSubscription-CFResponse.zip"
+
+  #CloudFormation's custom resource that allows users to interact and insert values for Redis parameters in order to create relevant API Calls.
+  Redis:
+      Type: Custom::FlexibleSubscription-Handler
+      Version: "1.0"
+      Properties:
+        ServiceToken: !GetAtt FlexibleSubscriptionHandler.Arn
+        version:                    !Ref version
+        baseURL:                    !Ref baseURL
+        subName:                    !If [subNameCondition, !Ref subName, !Ref "AWS::NoValue"]
+        dryRun:                     !If [dryRunCondition, !Ref dryRun, !Ref "AWS::NoValue"]
+        deploymentType:             !If [deploymentTypeCondition, !Ref deploymentType, !Ref "AWS::NoValue"]
+        paymentMethod:              !If [paymentMethodCondition, !Ref paymentMethod, !Ref "AWS::NoValue"]
+        paymentMethodId:            !Ref paymentMethodId
+        memoryStorage:              !If [memoryStorageCondition, !Ref memoryStorage, !Ref "AWS::NoValue"]
+        provider:                   !If [providerCondition, !Ref provider, !Ref "AWS::NoValue"]
+        cloudAccountId:             !If [cloudAccountIdCondition, !Ref cloudAccountId, !Ref "AWS::NoValue"]
+        region:                     !Ref region
+        multipleAvailabilityZones:  !If [multipleAvailabilityZonesCondition, !Ref multipleAvailabilityZones, !Ref "AWS::NoValue"]
+        preferredAvailabilityZones: !If [preferredAvailabilityZonesCondition, !Ref preferredAvailabilityZones, !Ref "AWS::NoValue"]
+        deploymentCIDR:             !Ref deploymentCIDR
+        vpcId:                      !If [vpcIdCondition, !Ref vpcId, !Ref "AWS::NoValue"]
+        dbname:                     !Ref dbname
+        protocol:                   !If [protocolCondition, !Ref protocol, !Ref "AWS::NoValue"]
+        memoryLimitInGb:            !Ref memoryLimitInGb
+        supportOSSClusterApi:       !If [supportOSSClusterApiCondition, !Ref supportOSSClusterApi, !Ref "AWS::NoValue"]
+        dataPersistence:            !If [dataPersistenceCondition, !Ref dataPersistence, !Ref "AWS::NoValue"]
+        replication:                !If [replicationCondition, !Ref replication, !Ref "AWS::NoValue"]
+        by:                         !If [byCondition, !Ref by, !Ref "AWS::NoValue"]
+        value:                      !If [valueCondition, !Ref value, !Ref "AWS::NoValue"]
+        moduleName:                 !If [moduleNameCondition, !Ref moduleName, !Ref "AWS::NoValue"]
+        parameters:                 !If [parametersCondition, !Ref parameters, !Ref "AWS::NoValue"]
+        quantity:                   !If [quantityCondition, !Ref quantity, !Ref "AWS::NoValue"]
+        averageItemSizeInBytes:     !If [averageItemSizeInBytesCondition, !Ref averageItemSizeInBytes, !Ref "AWS::NoValue"]
+        redisVersion:               !If [redisVersionCondition, !Ref redisVersion, !Ref "AWS::NoValue"]
+
+#Outputs section that is displayed in the Outputs' tab of the stack containing relevant information about Redis resources.
+#Those parameters are updated also upon stack Updates.         
+Outputs:
+  SubscriptionId:
+    Description: Subscription ID for the current stack
+    Value: !GetAtt Redis.SubscriptionId
+  DefaultDatabaseId:
+    Description: Default Database ID which was created together with the Subscription
+    Value: !GetAtt Redis.DefaultDatabaseId
+  SubscriptionDescription:
+    Description: Subscription Description which is related to successfull/failed API call
+    Value: !GetAtt Redis.SubscriptionDescription
+  PostCall:
+    Description: POST API call sent as a JSON to Redis Cloud
+    Value: !GetAtt Redis.PostCall
