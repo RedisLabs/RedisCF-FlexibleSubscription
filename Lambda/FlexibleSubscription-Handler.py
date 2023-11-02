@@ -252,7 +252,7 @@ def lambda_handler (event, context):
                 GetResponse(responseURL, responseBody)
     
     #If the action of CloudFormation is Delete stack    
-    if event['RequestType'] == "Delete"
+    if event['RequestType'] == "Delete":
         #If the parameters cannot be retrieved, this means the stack was already deleted
         try:
             cf_sub_id, cf_event, cf_db_id, cf_sub_description = CurrentOutputs()
