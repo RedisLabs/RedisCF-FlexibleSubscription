@@ -69,8 +69,8 @@ Parameters:
       AllowedValues: 
         - true
         - false
-      Description: "[Optional]. When 'false': Creates a deployment plan and deploys it (creating any resources required by the plan). When 'true': creates a read-only deployment plan without any resource creation. Example: false. Default: 'true'."
-      Default: true
+      Description: "[Optional]. When 'false': Creates a deployment plan and deploys it (creating any resources required by the plan). When 'true': creates a read-only deployment plan without any resource creation. Example: false. Default: 'false'."
+      Default: false
     deploymentType:
       Type: String
       AllowedValues: 
