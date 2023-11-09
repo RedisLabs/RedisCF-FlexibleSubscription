@@ -59,8 +59,8 @@ Parameters:
       Default: "latest"
     baseURL:
       Type: String
-      Description: "[Required]. Base URL link used to connect to API. Example: https://api-k8s-cloudapi.qa.redislabs.com."
-      Default: https://api-k8s-cloudapi.qa.redislabs.com
+      Description: "[Required]. Base URL link used to connect to API. Example: https://api.redislabs.com."
+      Default: https://api.redislabs.com
     subName:
       Type: String
       Description: "[Optional]. Subscription name. Example: My new subscription"
@@ -435,7 +435,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: 
-        Fn::Sub: FlexibleSubscriptionLambdaExecutionRole-${AWS::Region}-${AWS::StackName}
+        Fn::Sub: FlxSubLambdaRole-${AWS::Region}-${AWS::StackName}
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -447,7 +447,7 @@ Resources:
           - sts:AssumeRole
       Path: "/"
       Policies:
-      - PolicyName: FlexibleSubscriptionLambdaExecutionRole
+      - PolicyName: FlxSubLambdaRole
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
