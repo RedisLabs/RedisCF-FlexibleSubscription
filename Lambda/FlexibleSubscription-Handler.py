@@ -153,10 +153,10 @@ def lambda_handler (event, context):
     #If the action of CloudFormation is Create stack
     if event['RequestType'] == "Create":
         #The API Call the creates the Subscription
-        responseValue = PostSubscription(callEvent)
-        print (responseValue) 
-        
         try:
+            responseValue = PostSubscription(callEvent)
+            print (responseValue) 
+        
             #Retrieving Subscription ID, Subscription Description and DefaultDB ID to populate Outputs tab of the stack
             sub_id, sub_description = GetSubscriptionId (responseValue['links'][0]['href'])
             default_db_id = GetDatabaseId(sub_id)
