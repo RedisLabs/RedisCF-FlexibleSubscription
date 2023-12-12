@@ -157,6 +157,18 @@ def lambda_handler (event, context):
             print (responseValue) 
     
             try:
+                if "processing-error" in str(responseValue):           
+                    sub_error = GetSubscriptionError (responseValue['links'][0]['href'])
+                    responseStatus = 'FAILED'
+                    reason = str(sub_error)
+                    if responseStatus == 'FAILED':
+                        responseBody.update({"Status":responseStatus})
+                        if "Reason" in str(responseBody):
+                            responseBody.update({"Reason":reason})
+                        else:
+                            responseBody["Reason"] = reason
+                        GetResponse(responseURL, responseBody)
+
                 #Retrieving Subscription ID, Subscription Description and DefaultDB ID to populate Outputs tab of the stack
                 sub_id, sub_description = GetSubscriptionId (responseValue['links'][0]['href'])
                 default_db_id = GetDatabaseId(sub_id)
@@ -379,6 +391,13 @@ def GetSubscription (subscription_id = ""):
     
     response = requests.get(url, headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
     response_json = response.json()
+    print ("This is the response after POST call: " + str(response_json))
+
+    time.sleep(5)
+    response = requests.get(response_json['links'][0]['href'], headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
+    response_json = response.json()
+    print ("This is the response 5 seconds after POST call: " + str(response_json))
+
     return response_json
     Logs(response_json)
 
@@ -397,14 +416,12 @@ def GetSubscriptionId (url):
     response = requests.get(url, headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
     response = response.json()
     print (str(response))
-    count = 0
     
-    while "resourceId" not in str(response) or count < 120:
+    while "resourceId" not in str(response):
         time.sleep(1)
-        count += 1
-        print (str(response))
         response = requests.get(url, headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
         response = response.json()
+    print (str(response))
 
     sub_id = response["response"]["resourceId"]
     sub_description = response["description"]
@@ -414,11 +431,9 @@ def GetSubscriptionId (url):
 def GetSubscriptionError (url):
     response = requests.get(url, headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
     response = response.json()
-    count = 0
 
-    while "processing-error" not in str(response) or count < 120:
+    while "processing-error" not in str(response):
         time.sleep(1)
-        count += 1
         response = requests.get(url, headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
         response = response.json()
 
