@@ -167,8 +167,8 @@ Parameters:
       Type: Number
       Description: "[Required]. Throughput value (as applies to selected measurement method). Example: 10000"
     moduleName:
-      Type: String
-      Description: "[Required only to enable modules]. Redis module Id"
+      Type: CommaDelimitedList
+      Description: "[Required only to enable modules]. Redis module Id. Example: {'name':'RedisBloom'},{'name':'RedisJSON'}"
     parameters:
       Type: String
       Description: "[Optional]. Redis database module parameters (name and value), as relevant to the specific module (see modules parameters specification). Example: OrderedMap {}"
