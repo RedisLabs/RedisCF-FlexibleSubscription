@@ -71,12 +71,6 @@ Parameters:
         - false
       Description: "[Optional]. When 'false': Creates a deployment plan and deploys it (creating any resources required by the plan). When 'true': creates a read-only deployment plan without any resource creation. Example: false. Default: 'false'."
       Default: false
-    deploymentType:
-      Type: String
-      AllowedValues: 
-        - single-region
-      Description: "[Optional]. Creates a single region subscription. Example: single-region"
-      Default: single-region
     paymentMethod:
       Type: String
       AllowedValues: 
@@ -98,6 +92,7 @@ Parameters:
      Type: String
      AllowedValues:
        - AWS
+       - GCP
      Description: "[Optional]. Cloud provider. Example: AWS. Default: 'AWS'"
      Default: AWS
     cloudAccountId:
@@ -205,7 +200,6 @@ Metadata:
           - baseURL
           - subName
           - dryRun
-          - deploymentType
           - paymentMethod
           - paymentMethodId
           - memoryStorage
@@ -251,7 +245,6 @@ Metadata:
 Conditions:
   subNameCondition:                    !Not [!Equals [!Ref subName, ""]]
   dryRunCondition:                     !Not [!Equals [!Ref dryRun, ""]]
-  deploymentTypeCondition:             !Not [!Equals [!Ref deploymentType, ""]]
   paymentMethodCondition:              !Not [!Equals [!Ref paymentMethod, ""]]
   memoryStorageCondition:              !Not [!Equals [!Ref memoryStorage, ""]]
   providerCondition:                   !Not [!Equals [!Ref provider, ""]]
@@ -376,7 +369,7 @@ Resources:
             },
             "Wait": {
               "Type": "Wait",
-              "Seconds": 300,
+              "Seconds": 60,
               "Next": "CheckSubscriptionStatus"
             }
           }
@@ -572,7 +565,6 @@ Resources:
         baseURL:                    !Ref baseURL
         subName:                    !If [subNameCondition, !Ref subName, !Ref "AWS::NoValue"]
         dryRun:                     !If [dryRunCondition, !Ref dryRun, !Ref "AWS::NoValue"]
-        deploymentType:             !If [deploymentTypeCondition, !Ref deploymentType, !Ref "AWS::NoValue"]
         paymentMethod:              !If [paymentMethodCondition, !Ref paymentMethod, !Ref "AWS::NoValue"]
         paymentMethodId:            !Ref paymentMethodId
         memoryStorage:              !If [memoryStorageCondition, !Ref memoryStorage, !Ref "AWS::NoValue"]
@@ -595,6 +587,7 @@ Resources:
         parameters:                 !If [parametersCondition, !Ref parameters, !Ref "AWS::NoValue"]
         quantity:                   !If [quantityCondition, !Ref quantity, !Ref "AWS::NoValue"]
         averageItemSizeInBytes:     !If [averageItemSizeInBytesCondition, !Ref averageItemSizeInBytes, !Ref "AWS::NoValue"]
+        respVersion:                !If [respVersionCondition, !Ref respVersion, !Ref "AWS::NoValue"]
         redisVersion:               !If [redisVersionCondition, !Ref redisVersion, !Ref "AWS::NoValue"]
 
 #Outputs section that is displayed in the Outputs' tab of the stack containing relevant information about Redis resources.

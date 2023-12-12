@@ -113,8 +113,7 @@ def lambda_handler (event, context):
         callEvent["name"] = event['ResourceProperties']["subName"]
     if "dryRun" in event['ResourceProperties']:
         callEvent["dryRun"] = event['ResourceProperties']["dryRun"]
-    if "deploymentType" in event['ResourceProperties']:
-        callEvent["deploymentType"] = event['ResourceProperties']["deploymentType"]
+    callEvent["deploymentType"] = 'single-region'
     if "paymentMethod" in event['ResourceProperties']:
         callEvent["paymentMethod"] = event['ResourceProperties']["paymentMethod"]
     if "paymentMethodId" in event['ResourceProperties']:
@@ -193,6 +192,7 @@ def lambda_handler (event, context):
                     else:
                         responseBody["Reason"] = reason
                     GetResponse(responseURL, responseBody)
+                    
         except:
                 #This except block is triggered only for wrong base_url or wrong credentials.
                 responseStatus = 'FAILED'
@@ -399,7 +399,7 @@ def GetSubscriptionId (url):
     print (str(response))
     count = 0
     
-    while "resourceId" not in str(response) and count < 120:
+    while "resourceId" not in str(response) or count < 120:
         time.sleep(1)
         count += 1
         print (str(response))
@@ -416,7 +416,7 @@ def GetSubscriptionError (url):
     response = response.json()
     count = 0
 
-    while "processing-error" not in str(response) and count < 120:
+    while "processing-error" not in str(response) or count < 120:
         time.sleep(1)
         count += 1
         response = requests.get(url, headers={"accept":accept, "x-api-key":x_api_key, "x-api-secret-key":x_api_secret_key})
