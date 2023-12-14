@@ -155,8 +155,45 @@ def lambda_handler (event, context):
         try:
             responseValue = PostSubscription(callEvent)
             print (responseValue) 
-    
-            if "processing-error" in str(responseValue):           
+
+            try:
+                if "processing-error" in str(responseValue):           
+                    sub_error = GetSubscriptionError (responseValue['links'][0]['href'])
+                    responseStatus = 'FAILED'
+                    reason = str(sub_error)
+                    if responseStatus == 'FAILED':
+                        responseBody.update({"Status":responseStatus})
+                        if "Reason" in str(responseBody):
+                            responseBody.update({"Reason":reason})
+                        else:
+                            responseBody["Reason"] = reason
+                        GetResponse(responseURL, responseBody)
+
+                #Retrieving Subscription ID, Subscription Description and DefaultDB ID to populate Outputs tab of the stack
+                sub_id, sub_description = GetSubscriptionId (responseValue['links'][0]['href'])
+                default_db_id = GetDatabaseId(sub_id)
+                print ("New sub id is: " + str(sub_id))
+                print ("Description for Subscription with id " + str(sub_id) + " is: " + str(sub_description))
+                print("Default Database ID is: " + str(default_db_id))
+                        
+                responseData.update({"SubscriptionId":str(sub_id), "DefaultDatabaseId":str(default_db_id), "SubscriptionDescription":str(sub_description), "PostCall":str(callEvent)})
+                responseBody.update({"Data":responseData})
+                
+                #Initializing input for Step Functions then triggering the state machine
+                SFinput = {}
+                SFinput["responseBody"] = responseBody
+                SFinput["responseURL"] = responseURL
+                SFinput["base_url"] = event['ResourceProperties']['baseURL']
+                response = stepfunctions.start_execution(
+                    stateMachineArn = f'arn:aws:states:{runtime_region}:{aws_account_id}:stateMachine:FlexibleSubscription-StateMachine-{runtime_region}-{stack_name}',
+                    name = f'FlexibleSubscription-StateMachine-{runtime_region}-{stack_name}',
+                    input = json.dumps(SFinput)
+                    )
+                print ("Output sent to Step Functions is the following:")
+                print (json.dumps(SFinput))
+                            
+            except:
+                #If any error is encounter in the "try" block, then a function will catch the error and throw it back to CloudFormation as a failure reason.
                 sub_error = GetSubscriptionError (responseValue['links'][0]['href'])
                 responseStatus = 'FAILED'
                 reason = str(sub_error)
@@ -167,54 +204,18 @@ def lambda_handler (event, context):
                     else:
                         responseBody["Reason"] = reason
                     GetResponse(responseURL, responseBody)
-
-            #Retrieving Subscription ID, Subscription Description and DefaultDB ID to populate Outputs tab of the stack
-            sub_id, sub_description = GetSubscriptionId (responseValue['links'][0]['href'])
-            default_db_id = GetDatabaseId(sub_id)
-            print ("New sub id is: " + str(sub_id))
-            print ("Description for Subscription with id " + str(sub_id) + " is: " + str(sub_description))
-            print("Default Database ID is: " + str(default_db_id))
                     
-            responseData.update({"SubscriptionId":str(sub_id), "DefaultDatabaseId":str(default_db_id), "SubscriptionDescription":str(sub_description), "PostCall":str(callEvent)})
-            responseBody.update({"Data":responseData})
-            
-            #Initializing input for Step Functions then triggering the state machine
-            SFinput = {}
-            SFinput["responseBody"] = responseBody
-            SFinput["responseURL"] = responseURL
-            SFinput["base_url"] = event['ResourceProperties']['baseURL']
-            response = stepfunctions.start_execution(
-                stateMachineArn = f'arn:aws:states:{runtime_region}:{aws_account_id}:stateMachine:FlexibleSubscription-StateMachine-{runtime_region}-{stack_name}',
-                name = f'FlexibleSubscription-StateMachine-{runtime_region}-{stack_name}',
-                input = json.dumps(SFinput)
-                )
-            print ("Output sent to Step Functions is the following:")
-            print (json.dumps(SFinput))
-                        
         except:
-            #If any error is encounter in the "try" block, then a function will catch the error and throw it back to CloudFormation as a failure reason.
-            sub_error = GetSubscriptionError (responseValue['links'][0]['href'])
-            responseStatus = 'FAILED'
-            reason = str(sub_error)
-            if responseStatus == 'FAILED':
-                responseBody.update({"Status":responseStatus})
-                if "Reason" in str(responseBody):
-                    responseBody.update({"Reason":reason})
-                else:
-                    responseBody["Reason"] = reason
-                GetResponse(responseURL, responseBody)
-                    
-        # except:
-        #         #This except block is triggered only for wrong base_url or wrong credentials.
-        #         responseStatus = 'FAILED'
-        #         reason = 'Please check if the base_url or the credentials set in Secrets Manager are wrong.'
-        #         if responseStatus == 'FAILED':
-        #             responseBody.update({"Status":responseStatus})
-        #             if "Reason" in str(responseBody):
-        #                 responseBody.update({"Reason":reason})
-        #             else:
-        #                 responseBody["Reason"] = reason
-        #             GetResponse(responseURL, responseBody)
+                #This except block is triggered only for wrong base_url or wrong credentials.
+                responseStatus = 'FAILED'
+                reason = 'Please check if the base_url or the credentials set in Secrets Manager are wrong.'
+                if responseStatus == 'FAILED':
+                    responseBody.update({"Status":responseStatus})
+                    if "Reason" in str(responseBody):
+                        responseBody.update({"Reason":reason})
+                    else:
+                        responseBody["Reason"] = reason
+                    GetResponse(responseURL, responseBody)
 
     #If the action of CloudFormation is Update stack
     if event['RequestType'] == "Update":
