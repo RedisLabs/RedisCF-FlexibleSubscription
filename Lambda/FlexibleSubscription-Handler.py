@@ -99,8 +99,8 @@ def lambda_handler (event, context):
     if "by" in event['ResourceProperties']:
         databasesDict["throughputMeasurement"] = throughputMeasurement
     if "moduleName" in event['ResourceProperties']:
-        event['ResourceProperties']["moduleName"] = event['ResourceProperties']["moduleName"].replace("\"", "\'")
-        databasesDict["modules"] = event['ResourceProperties']["moduleName"]
+        # event['ResourceProperties']["moduleName"] = event['ResourceProperties']["moduleName"].replace("\"", "\'")
+        databasesDict["modules"] = event['ResourceProperties']["moduleName"].split(",")
     if "quantity" in event['ResourceProperties']:
         databasesDict["quantity"] = int(event['ResourceProperties']["quantity"])
     if "averageItemSizeInBytes" in event['ResourceProperties']:
