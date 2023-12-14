@@ -78,7 +78,6 @@ def lambda_handler (event, context):
     
     if "moduleName" in event['ResourceProperties']:
         modulesList = []
-        event['ResourceProperties']["moduleName"] = event['ResourceProperties']["moduleName"].replace(" ", "")
         modules = event['ResourceProperties']["moduleName"].split(",")
         modulesList = [{'name': module} for module in modules]
     
