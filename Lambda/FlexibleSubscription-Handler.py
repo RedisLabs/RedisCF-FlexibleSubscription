@@ -129,6 +129,7 @@ def lambda_handler (event, context):
     if "redisVersion" in event['ResourceProperties']:
         callEvent["redisVersion"] = event['ResourceProperties']["redisVersion"]
 
+    callEvent = callEvent.replace("\"", "\'")
     print ("callEvent that is used as the actual API Call is bellow:")
     print (callEvent)
     
