@@ -81,7 +81,6 @@ def lambda_handler (event, context):
         event['ResourceProperties']["moduleName"] = event['ResourceProperties']["moduleName"].replace(" ", "")
         modules = event['ResourceProperties']["moduleName"].split(",")
         modulesList = [{'name': module} for module in modules]
-    print (modulesList)
     
     databasesList = []
     databasesDict = {}
