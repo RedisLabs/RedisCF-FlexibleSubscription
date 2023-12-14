@@ -83,10 +83,6 @@ def lambda_handler (event, context):
     if "parameters" in event['ResourceProperties']: 
         modulesDict["parameters"] = event['ResourceProperties']["parameters"]
     modulesList.append(modulesDict)
-
-    modulesList = []
-    if "moduleName" in event['ResourceProperties']:
-        modulesList = event['ResourceProperties']["moduleName"].split(",")
     
     databasesList = []
     databasesDict = {}
@@ -103,7 +99,8 @@ def lambda_handler (event, context):
     if "by" in event['ResourceProperties']:
         databasesDict["throughputMeasurement"] = throughputMeasurement
     if "moduleName" in event['ResourceProperties']:
-        databasesDict["modules"] = modulesList
+        event['ResourceProperties']["moduleName"] = event['ResourceProperties']["moduleName"].replace("\"", "\'")
+        databasesDict["modules"] = event['ResourceProperties']["moduleName"]
     if "quantity" in event['ResourceProperties']:
         databasesDict["quantity"] = int(event['ResourceProperties']["quantity"])
     if "averageItemSizeInBytes" in event['ResourceProperties']:
@@ -129,7 +126,6 @@ def lambda_handler (event, context):
     if "redisVersion" in event['ResourceProperties']:
         callEvent["redisVersion"] = event['ResourceProperties']["redisVersion"]
 
-    callEvent = callEvent.replace("\"", "\'")
     print ("callEvent that is used as the actual API Call is bellow:")
     print (callEvent)
     
